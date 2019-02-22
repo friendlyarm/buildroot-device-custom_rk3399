@@ -3,11 +3,11 @@
 # Target arch
 export RK_ARCH=arm64
 # Uboot defconfig
-export RK_UBOOT_DEFCONFIG=rk3399
+export RK_UBOOT_DEFCONFIG=rk3399_defconfig
 # Kernel defconfig
-export RK_KERNEL_DEFCONFIG=rockchip_linux_defconfig
-# Kernel dts
-export RK_KERNEL_DTS=rk3399-sapphire-excavator-linux
+export RK_KERNEL_DEFCONFIG=nanopi4_linux_defconfig
+# Kernel dts (NanoPC T4)
+export RK_KERNEL_DTS=rk3399-nanopi4-rev00
 # boot image type
 export RK_BOOT_IMG=boot.img
 # kernel image path
