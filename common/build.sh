@@ -357,22 +357,25 @@ function copy_and_verify(){
 }
 
 function prepare_image_for_friendlyelec_eflasher(){
-    if [ ! -d ${SDFUSE_DIR}/buildroot ]; then
-        mkdir ${SDFUSE_DIR}/buildroot
+    local OS_DIR=$1
+    local ROOTFS=$2
+    local IMGSIZE=$3
+    if [ ! -d ${SDFUSE_DIR}/${OS_DIR} ]; then
+        mkdir ${SDFUSE_DIR}/${OS_DIR}
     fi
-    rm -f ${SDFUSE_DIR}/buildroot/*
+    rm -f ${SDFUSE_DIR}/${OS_DIR}/*
 
-    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.12.109.bin ${SDFUSE_DIR}/buildroot/MiniLoaderAll.bin "error: please build uboot first."
-    copy_and_verify $TOP_DIR/u-boot/uboot.img ${SDFUSE_DIR}/buildroot "error: please build uboot first."
-    copy_and_verify $TOP_DIR/u-boot/trust.img ${SDFUSE_DIR}/buildroot "error: please build uboot first."
-    copy_and_verify $TOP_DIR/kernel/kernel.img ${SDFUSE_DIR}/buildroot "error: please build kernel first."
-    copy_and_verify $TOP_DIR/kernel/resource.img ${SDFUSE_DIR}/buildroot "error: please build kernel first."
+    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.12.109.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
+    copy_and_verify $TOP_DIR/u-boot/uboot.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
+    copy_and_verify $TOP_DIR/u-boot/trust.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
+    copy_and_verify $TOP_DIR/kernel/kernel.img ${SDFUSE_DIR}/${OS_DIR} "error: please build kernel first."
+    copy_and_verify $TOP_DIR/kernel/resource.img ${SDFUSE_DIR}/${OS_DIR} "error: please build kernel first."
 
     ###############################
     ######## ramdisk      ########
     ###############################
-    copy_and_verify ${SDFUSE_DIR}/prebuilt/idbloader.img ${SDFUSE_DIR}/buildroot ""
-    copy_and_verify ${SDFUSE_DIR}/prebuilt/boot.img ${SDFUSE_DIR}/buildroot ""
+    copy_and_verify ${SDFUSE_DIR}/prebuilt/idbloader.img ${SDFUSE_DIR}/${OS_DIR} ""
+    copy_and_verify ${SDFUSE_DIR}/prebuilt/boot.img ${SDFUSE_DIR}/${OS_DIR} ""
 
     ###############################
     ######## custom rootfs ########
@@ -380,13 +383,24 @@ function prepare_image_for_friendlyelec_eflasher(){
     FA_TMP_DIR=$TOP_DIR/friendlyelec/tmp-rootfs
     rm -rf $FA_TMP_DIR
     mkdir -p $FA_TMP_DIR
-    mkdir -p $FA_TMP_DIR/mnt
-    copy_and_verify ${TOP_DIR}/buildroot/output/rockchip_rk3399/images/rootfs.ext2 $FA_TMP_DIR/rootfs-org.img "error: please build rootfs first."
-    mount -t ext4 -o loop $FA_TMP_DIR/rootfs-org.img $FA_TMP_DIR/mnt
-    mkdir $FA_TMP_DIR/rootfs
-    cp -af $FA_TMP_DIR/mnt/* $FA_TMP_DIR/rootfs
-    umount $FA_TMP_DIR/mnt
-    rm -rf $FA_TMP_DIR/mnt
+
+    if [ -f ${ROOTFS} ]; then
+        mkdir -p $FA_TMP_DIR/mnt
+        copy_and_verify ${ROOTFS} $FA_TMP_DIR/rootfs-org.img "error: please build rootfs first."
+        mount -t ext4 -o loop $FA_TMP_DIR/rootfs-org.img $FA_TMP_DIR/mnt
+        mkdir $FA_TMP_DIR/rootfs
+        cp -af $FA_TMP_DIR/mnt/* $FA_TMP_DIR/rootfs
+        umount $FA_TMP_DIR/mnt
+        rm -rf $FA_TMP_DIR/mnt
+    elif [ -d ${ROOTFS} ]; then
+        mkdir $FA_TMP_DIR/rootfs
+        echo "Coping rootfs ..."
+        cp -af ${ROOTFS}/* $FA_TMP_DIR/rootfs
+        clean_device_files $FA_TMP_DIR/rootfs
+    else
+        echo "error: please build rootfs first."
+        exit 1
+    fi
 
     cat << 'EOL' > $FA_TMP_DIR/rootfs/etc/fstab
     # <file system>                 <mount pt>              <type>          <options>               <dump>  <pass>
@@ -415,8 +429,10 @@ EOL
     rsync -a --exclude='.git' $TOP_DIR/friendlyelec/rk3399/fs-overlay-64/* $FA_TMP_DIR/rootfs/
 
     # oem
+    [ -d $FA_TMP_DIR/rootfs/oem ] || mkdir $FA_TMP_DIR/rootfs/oem
     cp -af $TOP_DIR/device/rockchip/oem/oem_normal/* $FA_TMP_DIR/rootfs/oem
     # userdata
+    [ -d $FA_TMP_DIR/rootfs/userdata ] || mkdir $FA_TMP_DIR/rootfs/userdata
     cp -af $TOP_DIR/device/rockchip/userdata/userdata_normal/* $FA_TMP_DIR/rootfs/userdata
 
     # misc
@@ -426,14 +442,14 @@ EOL
     # remove /dev/console
     rm -f $FA_TMP_DIR/rootfs/dev/console
 
-    (cd $FA_TMP_DIR/ && ${SDFUSE_DIR}/tools/make_ext4fs -s -l 1073741824 -a root -L rootfs rootfs.img rootfs)
-    copy_and_verify $FA_TMP_DIR/rootfs.img ${SDFUSE_DIR}/buildroot/rootfs.img " "
+    (cd $FA_TMP_DIR/ && ${SDFUSE_DIR}/tools/make_ext4fs -s -l ${IMGSIZE} -a root -L rootfs rootfs.img rootfs)
+    copy_and_verify $FA_TMP_DIR/rootfs.img ${SDFUSE_DIR}/${OS_DIR}/rootfs.img " "
     rm -rf $FA_TMP_DIR
 
     ###############################
     ######## parameter.txt ########
     ###############################
-cat << 'EOL' > ${SDFUSE_DIR}/buildroot/parameter.txt
+cat << 'EOL' > ${SDFUSE_DIR}/${OS_DIR}/parameter.txt
 FIRMWARE_VER: 6.0.1
 MACHINE_MODEL: RK3399
 MACHINE_ID: 007
@@ -452,20 +468,71 @@ CMDLINE: root=/dev/mmcblk1p7 rw rootfstype=ext4 mtdparts=rk29xxnand:0x00002000@0
 EOL
 }
 
+function clean_device_files()
+{
+    # create tmp dir
+    if [ ! -d ${1}/tmp ]; then
+        mkdir ${1}/tmp
+    fi
+    chmod 1777 ${1}/tmp
+    chown root:root ${1}/tmp
+    (cd ${1}/dev && find . ! -type d -exec rm {} \;)
+}
+
 function build_sdimg(){
-    prepare_image_for_friendlyelec_eflasher && (cd ${SDFUSE_DIR} && ./mk-sd-image.sh buildroot) && {
+    local IMG=
+    local ROOTFS=
+    local IMGSIZE=
+    if [ -z ${OS_NAME} ]; then
+        OS_NAME=buildroot
+    fi
+    if [ x${OS_NAME} = xbuildroot ]; then
+        IMG=rk3399-sd-buildroot-linux-4.4-arm64-$(date +%Y%m%d).img
+        ROOTFS=${TOP_DIR}/buildroot/output/rockchip_rk3399/images/rootfs.ext2
+        IMGSIZE=1073741824
+    elif [ x${OS_NAME} = xdebian ]; then
+        IMG=rk3399-sd-debian9-4.4-armhf-$(date +%Y%m%d).img
+        ROOTFS=${TOP_DIR}/rootfs/binary
+        IMGSIZE=3670016000
+        if [ ! -d ${TOP_DIR}/rootfs/binary ]; then
+            echo "error: please build debian first."
+            exit 1
+        fi
+    else
+        echo "Unknow OS: ${OS_NAME}"
+        exit 1
+    fi
+    prepare_image_for_friendlyelec_eflasher ${OS_NAME} ${ROOTFS} ${IMGSIZE} && (cd ${SDFUSE_DIR} && ./mk-sd-image.sh ${OS_NAME}) && {
         echo "-----------------------------------------"
         echo "Run the following for sdcard install:"
-        echo "    dd if=out/rk3399-sd-buildroot-linux-4.4-arm64-$(date +%Y%m%d).img of=/dev/sdX bs=1M"
+        echo "    dd if=out/${IMG} of=/dev/sdX bs=1M"
         echo "-----------------------------------------"
     }
 }
 
 function build_emmcimg() {
-    prepare_image_for_friendlyelec_eflasher && (cd ${SDFUSE_DIR} && ./mk-emmc-image.sh buildroot) && {
+    local IMG=
+    local ROOTFS=
+    local IMGSIZE=
+    if [ -z ${OS_NAME} ]; then
+        OS_NAME=buildroot
+    fi
+    if [ x${OS_NAME} = xbuildroot ]; then
+        IMG=rk3399-eflasher-buildroot-linux-4.4-arm64-$(date +%Y%m%d).img
+        ROOTFS=${TOP_DIR}/buildroot/output/rockchip_rk3399/images/rootfs.ext2
+        IMGSIZE=1073741824
+    elif [ x${OS_NAME} = xdebian ]; then
+        IMG=rk3399-eflasher-debian9-4.4-armhf-$(date +%Y%m%d).img
+        ROOTFS=${TOP_DIR}/rootfs/binary
+        IMGSIZE=3670016000
+    else
+        echo "Unknow OS: ${OS_NAME}"
+        exit 1
+    fi
+    prepare_image_for_friendlyelec_eflasher ${OS_NAME} ${ROOTFS} ${IMGSIZE} && (cd ${SDFUSE_DIR} && ./mk-emmc-image.sh ${OS_NAME}) && {
         echo "-----------------------------------------"
         echo "Run the following for sdcard install:"
-        echo "    dd if=out/rk3399-eflasher-buildroot-linux-4.4-arm64-$(date +%Y%m%d).img of=/dev/sdX bs=1M"
+        echo "    dd if=out/${IMG} of=/dev/sdX bs=1M"
         echo "-----------------------------------------"
     }
 }
