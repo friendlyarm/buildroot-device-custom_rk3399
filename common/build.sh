@@ -301,6 +301,9 @@ function build_cleanall(){
 	rm -rf $TOP_DIR/yocto/build
 	rm -rf $TOP_DIR/distro/output
 	rm -rf $TOP_DIR/debian/binary
+	(cd friendlyelec/rk3399/sd-fuse_rk3399 && {
+		./clean.sh
+	})
 }
 
 function build_firmware(){
@@ -704,7 +707,7 @@ elif [ "$BUILD_TARGET" == firmware ];then
 #    build_save
 #    exit 0
 elif [ "$BUILD_TARGET" == cleanall ];then
-    clean_all
+    build_cleanall
     exit 0
 elif [ "$BUILD_TARGET" == --help ] || [ "$BUILD_TARGET" == help ] || [ "$BUILD_TARGET" == -h ];then
     usage
