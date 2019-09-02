@@ -12,7 +12,21 @@ TOP_DIR=$(pwd)
 SDFUSE_DIR=$TOP_DIR/friendlyelec/rk3399/sd-fuse_rk3399
 COMMON_DIR=$TOP_DIR/device/rockchip/common
 BOARD_CONFIG=$TOP_DIR/device/rockchip/.BoardConfig.mk
+if [ ! -e "$BOARD_CONFIG" ]; then
+	(cd $TOP_DIR/device/rockchip && {
+		ln -s rk3399/BoardConfig.mk .BoardConfig.mk
+	})
+fi
 source $BOARD_CONFIG
+
+if [ ! -n "$1" ];then
+	echo "build all"
+	BUILD_TARGET=all
+else
+	BUILD_TARGET="$1"
+	NEW_BOARD_CONFIG=$TOP_DIR/device/rockchip/$RK_TARGET_PRODUCT/$1
+fi
+
 source $TOP_DIR/device/rockchip/common/Version.mk
 
 function usage()
@@ -22,27 +36,27 @@ function usage()
 	echo "BoardConfig*.mk    -switch to specified board config"
 	echo "uboot              -build uboot"
 	echo "kernel             -build kernel"
-	echo "modules            -build kernel modules"
+#	echo "modules            -build kernel modules"
 	echo "rootfs             -build default rootfs, currently build buildroot as default"
 	echo "buildroot          -build buildroot rootfs"
-	echo "ramboot            -build ramboot image"
-	echo "multi-npu_boot     -build boot image for multi-npu board"
-	echo "yocto              -build yocto rootfs"
-	echo "debian             -build debian9 stretch rootfs"
-	echo "distro             -build debian10 buster rootfs"
-	echo "pcba               -build pcba"
-	echo "recovery           -build recovery"
+#	echo "ramboot            -build ramboot image"
+#	echo "multi-npu_boot     -build boot image for multi-npu board"
+#	echo "yocto              -build yocto rootfs"
+#	echo "debian             -build debian9 stretch rootfs"
+#	echo "distro             -build debian10 buster rootfs"
+#	echo "pcba               -build pcba"
+#	echo "recovery           -build recovery"
 	echo "all                -build uboot, kernel, rootfs, recovery image"
 	echo "cleanall           -clean uboot, kernel, rootfs, recovery"
-	echo "firmware           -pack all the image we need to boot up system"
-	echo "updateimg          -pack update image"
-	echo "otapackage         -pack ab update otapackage image"
+#	echo "firmware           -pack all the image we need to boot up system"
+#	echo "updateimg          -pack update image"
+#	echo "otapackage         -pack ab update otapackage image"
 	echo "sd-img             -pack sd-card image, used to create bootable SD card"
 	echo "emmc-img           -pack sd-card image, used to install buildroot to emmc"
-	echo "save               -save images, patches, commands used to debug"
-	echo "allsave            -build all & firmware & updateimg & save"
+#	echo "save               -save images, patches, commands used to debug"
+#	echo "allsave            -build all & firmware & updateimg & save"
 	echo ""
-	echo "Default option is 'allsave'."
+	echo "Default option is 'all'."
 }
 
 function build_uboot(){
@@ -84,7 +98,7 @@ function build_modules(){
 	cd $TOP_DIR/kernel && make ARCH=$RK_ARCH $RK_KERNEL_DEFCONFIG && make ARCH=$RK_ARCH modules -j$RK_JOBS && cd -
 	if [ $? -eq 0 ]; then
 		echo "====Build kernel ok!===="
-	else
+	else	
 		echo "====Build kernel failed!===="
 		exit 1
 	fi
@@ -276,8 +290,7 @@ function build_all(){
 	build_uboot
 	build_kernel
 	build_rootfs ${RK_ROOTFS_SYSTEM:-buildroot}
-	build_recovery
-	build_ramboot
+	build_sdimg
 }
 
 function build_cleanall(){
@@ -642,67 +655,61 @@ function build_allsave(){
 #=========================
 # build targets
 #=========================
-if echo $@|grep -wqE "help|-h"; then
-	usage
-	exit 0
-elif [ $BUILD_TARGET == uboot ];then
+if [ "$BUILD_TARGET" == uboot ];then
     build_uboot
     exit 0
-elif [ $BUILD_TARGET == kernel ];then
+elif [ "$BUILD_TARGET" == kernel ];then
     build_kernel
     exit 0
-elif [ $BUILD_TARGET == rootfs ];then
+elif [ "$BUILD_TARGET" == rootfs ];then
     build_rootfs
     exit 0
-elif [ $BUILD_TARGET == buildroot ];then
+elif [ "$BUILD_TARGET" == buildroot ];then
     build_buildroot
     exit 0
-elif [ $BUILD_TARGET == recovery ];then
+elif [ "$BUILD_TARGET" == recovery ];then
     build_recovery
     exit 0
-elif [ $BUILD_TARGET == ramboot ];then
+elif [ "$BUILD_TARGET" == ramboot ];then
     build_ramboot
     exit 0
-elif [ $BUILD_TARGET == pcba ];then
+elif [ "$BUILD_TARGET" == pcba ];then
     build_pcba
     exit 0
-elif [ $BUILD_TARGET == yocto ];then
+elif [ "$BUILD_TARGET" == yocto ];then
     build_yocto
     exit 0
-elif [ $BUILD_TARGET == ros ];then
+elif [ "$BUILD_TARGET" == ros ];then
     build_ros
     exit 0
-elif [ $BUILD_TARGET == debian ];then
+elif [ "$BUILD_TARGET" == debian ];then
     build_debian
     exit 0
-elif [ $BUILD_TARGET == updateimg ];then
+elif [ "$BUILD_TARGET" == updateimg ];then
     build_updateimg
     exit 0
-elif [ $BUILD_TARGET == sd-img ]; then
+elif [ "$BUILD_TARGET" == sd-img ]; then
     build_sdimg
     exit 0
-elif [ $BUILD_TARGET == emmc-img ]; then
+elif [ "$BUILD_TARGET" == emmc-img ]; then
     build_emmcimg
     exit 0
-elif [ $BUILD_TARGET == all ];then
+elif [ "$BUILD_TARGET" == all ];then
     build_all
     exit 0
-elif [ $BUILD_TARGET == firmware ];then
+elif [ "$BUILD_TARGET" == firmware ];then
     build_firmware
     exit 0
-elif [ $BUILD_TARGET == save ];then
-    build_save
-    exit 0
-elif [ $BUILD_TARGET == cleanall ];then
+#elif [ "$BUILD_TARGET" == save ];then
+#    build_save
+#    exit 0
+elif [ "$BUILD_TARGET" == cleanall ];then
     clean_all
     exit 0
-elif [ $BUILD_TARGET == --help ] || [ $BUILD_TARGET == help ] || [ $BUILD_TARGET == -h ];then
+elif [ "$BUILD_TARGET" == --help ] || [ "$BUILD_TARGET" == help ] || [ "$BUILD_TARGET" == -h ];then
     usage
     exit 0
-elif [ $BUILD_TARGET == allsave ];then
-    build_all_save
-    exit 0
-elif [ -f $NEW_BOARD_CONFIG ];then
+elif [ -f "$NEW_BOARD_CONFIG" ];then
     rm -f $BOARD_CONFIG
     ln -s $NEW_BOARD_CONFIG $BOARD_CONFIG
 else
@@ -710,29 +717,3 @@ else
     usage
     exit 1
 fi
-
-OPTIONS="$@"
-for option in ${OPTIONS:-allsave}; do
-	echo "processing option: $option"
-	case $option in
-		BoardConfig*.mk)
-			CONF=$TOP_DIR/device/rockchip/$RK_TARGET_PRODUCT/$option
-			echo "switching to board: $CONF"
-			if [ ! -f $CONF ]; then
-				echo "not exist!"
-				exit 1
-			fi
-
-			ln -sf $CONF $BOARD_CONFIG
-			;;
-		buildroot|debian|distro|yocto)
-			build_rootfs $option
-			;;
-		recovery)
-			build_kernel
-			;&
-		*)
-			eval build_$option || usage
-			;;
-	esac
-done
