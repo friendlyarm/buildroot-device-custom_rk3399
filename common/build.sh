@@ -20,8 +20,7 @@ fi
 source $BOARD_CONFIG
 
 if [ ! -n "$1" ];then
-	echo "build all"
-	BUILD_TARGET=all
+	BUILD_TARGET=
 else
 	BUILD_TARGET="$1"
 	NEW_BOARD_CONFIG=$TOP_DIR/device/rockchip/$RK_TARGET_PRODUCT/$1
@@ -33,7 +32,8 @@ function usage()
 {
 	echo "Usage: build.sh [OPTIONS]"
 	echo "Available options:"
-	echo "BoardConfig*.mk    -switch to specified board config"
+#	echo "BoardConfig*.mk    -switch to specified board config"
+	echo "all                -build uboot, kernel, rootfs, recovery image"
 	echo "uboot              -build uboot"
 	echo "kernel             -build kernel"
 #	echo "modules            -build kernel modules"
@@ -46,7 +46,6 @@ function usage()
 #	echo "distro             -build debian10 buster rootfs"
 #	echo "pcba               -build pcba"
 #	echo "recovery           -build recovery"
-	echo "all                -build uboot, kernel, rootfs, recovery image"
 	echo "cleanall           -clean uboot, kernel, rootfs, recovery"
 #	echo "firmware           -pack all the image we need to boot up system"
 #	echo "updateimg          -pack update image"
@@ -56,8 +55,13 @@ function usage()
 #	echo "save               -save images, patches, commands used to debug"
 #	echo "allsave            -build all & firmware & updateimg & save"
 	echo ""
-	echo "Default option is 'all'."
+#	echo "Default option is 'all'."
 }
+
+if [ ! -n "$1" ];then
+	usage
+	exit 1
+fi
 
 function build_uboot(){
 	echo "============Start build uboot============"
@@ -380,7 +384,7 @@ function prepare_image_for_friendlyelec_eflasher(){
     fi
     rm -rf ${SDFUSE_DIR}/${OS_DIR}/*
 
-    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.12.109.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
+    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.22.119.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/uboot.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/trust.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/kernel/kernel.img ${SDFUSE_DIR}/${OS_DIR} "error: please build kernel first."
