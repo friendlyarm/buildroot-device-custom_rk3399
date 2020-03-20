@@ -1,30 +1,30 @@
 #!/bin/bash
 
-COMMON_DIR=$(cd `dirname $0`; pwd)
-if [ -h $0 ]
-then
-        CMD=$(readlink $0)
-        COMMON_DIR=$(dirname $CMD)
-fi
-cd $COMMON_DIR
-cd ../../..
-TOP_DIR=$(pwd)
-SDFUSE_DIR=$TOP_DIR/friendlyelec/rk3399/sd-fuse_rk3399
-COMMON_DIR=$TOP_DIR/device/rockchip/common
+CMD=`realpath $0`
+COMMON_DIR=`dirname $CMD`
+TOP_DIR=$(realpath $COMMON_DIR/../../..)
 BOARD_CONFIG=$TOP_DIR/device/rockchip/.BoardConfig.mk
-if [ ! -e "$BOARD_CONFIG" ]; then
-	(cd $TOP_DIR/device/rockchip && {
-		ln -s rk3399/BoardConfig.mk .BoardConfig.mk
-	})
-fi
 source $BOARD_CONFIG
 
+SDFUSE_DIR=$TOP_DIR/friendlyelec/rk3399/sd-fuse_rk3399
 if [ ! -n "$1" ];then
 	BUILD_TARGET=
 else
 	BUILD_TARGET="$1"
 	NEW_BOARD_CONFIG=$TOP_DIR/device/rockchip/$RK_TARGET_PRODUCT/$1
 fi
+
+echo "Dump env:"
+echo "--------------------"
+echo "CMD = $CMD"
+echo "COMMON_DIR = $COMMON_DIR"
+echo "TOP_DIR = $TOP_DIR"
+echo "BOARD_CONFIG = $BOARD_CONFIG"
+echo "SDFUSE_DIR = $SDFUSE_DIR"
+echo "BUILD_TARGET = $BUILD_TARGET"
+echo "NEW_BOARD_CONFIG = $NEW_BOARD_CONFIG"
+echo ""
+
 
 source $TOP_DIR/device/rockchip/common/Version.mk
 
@@ -384,7 +384,7 @@ function prepare_image_for_friendlyelec_eflasher(){
     fi
     rm -rf ${SDFUSE_DIR}/${OS_DIR}/*
 
-    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.22.119.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
+    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.24.119.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/uboot.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/trust.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/kernel/kernel.img ${SDFUSE_DIR}/${OS_DIR} "error: please build kernel first."
@@ -668,8 +668,11 @@ if [ "$BUILD_TARGET" == uboot ];then
 elif [ "$BUILD_TARGET" == kernel ];then
     build_kernel
     exit 0
+elif [ "$BUILD_TARGET" == modules ]; then
+    echo "FIXME: build modules"
+    exit 0
 elif [ "$BUILD_TARGET" == rootfs ];then
-    build_rootfs
+    build_rootfs ${RK_ROOTFS_SYSTEM:-buildroot}
     exit 0
 elif [ "$BUILD_TARGET" == buildroot ];then
     build_buildroot
