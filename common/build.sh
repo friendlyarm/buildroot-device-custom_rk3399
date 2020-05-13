@@ -699,9 +699,21 @@ elif [ "$BUILD_TARGET" == updateimg ];then
     build_updateimg
     exit 0
 elif [ "$BUILD_TARGET" == sd-img ]; then
+    # Automatically re-run script under sudo if not root
+    if [ $(id -u) -ne 0 ]; then
+        echo "Re-running script under sudo..."
+        sudo "$0" "$@"
+        exit
+    fi
     build_sdimg
     exit 0
 elif [ "$BUILD_TARGET" == emmc-img ]; then
+    # Automatically re-run script under sudo if not root
+    if [ $(id -u) -ne 0 ]; then
+        echo "Re-running script under sudo..."
+        sudo "$0" "$@"
+        exit
+    fi
     build_emmcimg
     exit 0
 elif [ "$BUILD_TARGET" == all ];then
@@ -714,6 +726,12 @@ elif [ "$BUILD_TARGET" == firmware ];then
 #    build_save
 #    exit 0
 elif [ "$BUILD_TARGET" == cleanall ];then
+    # Automatically re-run script under sudo if not root
+    if [ $(id -u) -ne 0 ]; then
+        echo "Re-running script under sudo..."
+        sudo "$0" "$@"
+        exit
+    fi
     build_cleanall
     exit 0
 elif [ "$BUILD_TARGET" == --help ] || [ "$BUILD_TARGET" == help ] || [ "$BUILD_TARGET" == -h ];then
