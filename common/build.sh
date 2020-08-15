@@ -1,5 +1,7 @@
 #!/bin/bash
+set -eu
 
+true ${OS_NAME:=buildroot}
 CMD=`realpath $0`
 COMMON_DIR=`dirname $CMD`
 TOP_DIR=$(realpath $COMMON_DIR/../../..)
@@ -434,6 +436,14 @@ function prepare_image_for_friendlyelec_eflasher(){
     debug                           /sys/kernel/debug       debugfs         defaults                0       0
     pstore                          /sys/fs/pstore          pstore          defaults                0       0
 EOL
+
+    # update libmali to r18
+    (cd $FA_TMP_DIR/rootfs/usr/lib && {
+        rm -f libmali.so.1 libmali-midgard-t86x-r14p0-wayland.so
+        cp $TOP_DIR/external/libmali/lib/aarch64-linux-gnu/libmali-midgard-t86x-r18p0-wayland.so .
+        chmod 644 libmali-midgard-t86x-r18p0-wayland.so
+        ln -s libmali-midgard-t86x-r18p0-wayland.so libmali.so.1
+    })
 
     #kernel modules
     KER_MODULES_OUTDIR=/tmp/output_rk3399_kmodules
