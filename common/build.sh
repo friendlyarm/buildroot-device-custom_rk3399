@@ -384,7 +384,7 @@ function prepare_image_for_friendlyelec_eflasher(){
     fi
     rm -rf ${SDFUSE_DIR}/${OS_DIR}/*
 
-    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.24.119.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
+    copy_and_verify $TOP_DIR/u-boot/rk3399_loader_v1.24.126.bin ${SDFUSE_DIR}/${OS_DIR}/MiniLoaderAll.bin "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/uboot.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/u-boot/trust.img ${SDFUSE_DIR}/${OS_DIR} "error: please build uboot first."
     copy_and_verify $TOP_DIR/kernel/kernel.img ${SDFUSE_DIR}/${OS_DIR} "error: please build kernel first."
@@ -395,6 +395,8 @@ function prepare_image_for_friendlyelec_eflasher(){
     ###############################
     copy_and_verify ${SDFUSE_DIR}/prebuilt/idbloader.img ${SDFUSE_DIR}/${OS_DIR} ""
     copy_and_verify ${SDFUSE_DIR}/prebuilt/boot.img ${SDFUSE_DIR}/${OS_DIR} ""
+    copy_and_verify ${SDFUSE_DIR}/prebuilt/misc.img ${SDFUSE_DIR}/${OS_DIR} ""
+    copy_and_verify ${SDFUSE_DIR}/prebuilt/dtbo.img ${SDFUSE_DIR}/${OS_DIR} ""
 
     ###############################
     ######## custom rootfs ########
@@ -492,65 +494,17 @@ EOL
     ######## parameter.txt ########
     ###############################
 cat > ${SDFUSE_DIR}/${OS_DIR}/parameter.txt << EOL
-FIRMWARE_VER: 6.0.1
-MACHINE_MODEL: RK3399
-MACHINE_ID: 007
+FIRMWARE_VER:10.0
+MACHINE_MODEL:RK3399
+MACHINE_ID:007
 MANUFACTURER: RK3399
 MAGIC: 0x5041524B
 ATAG: 0x00200800
 MACHINE: 3399
 CHECK_MASK: 0x80
 PWR_HLD: 0,0,A,0,1
-#KERNEL_IMG: 0x00280000
-#FDT_NAME: rk-kernel.dtb
-#RECOVER_KEY: 1,1,0,20,0
-#in section; per section 512(0x200) bytes
-CMDLINE: root=/dev/mmcblk1p7 rw rootfstype=ext4 data=/dev/mmcblk1p8 consoleblank=0 mtdparts=rk29xxnand:0x00002000@0x00002000(uboot),0x00002000@0x00004000(trust),0x00002000@0x00006000(misc),0x00006000@0x00008000(resource),0x00010000@0x0000e000(kernel),0x00010000@0x0001e000(boot),${ROOTFS_PARTITION_SIZE}@0x00030000(rootfs),-@${USERDATA_PARTITION_ADDR}(userdata)
-
-EOL
-
-    mkdir -p ${SDFUSE_DIR}/${OS_DIR}/sd-boot
-    ##########################################################
-    ######## param4sd.txt (parameter.txt for sd-boot) ########
-    ##########################################################
-cat > ${SDFUSE_DIR}/${OS_DIR}/sd-boot/param4sd.txt << EOL
-FIRMWARE_VER: 6.0.1
-MACHINE_MODEL: RK3399
-MACHINE_ID: 007
-MANUFACTURER: RK3399
-MAGIC: 0x5041524B
-ATAG: 0x00200800
-MACHINE: 3399
-CHECK_MASK: 0x80
-PWR_HLD: 0,0,A,0,1
-#KERNEL_IMG: 0x00280000
-#FDT_NAME: rk-kernel.dtb
-#RECOVER_KEY: 1,1,0,20,0
-#in section; per section 512(0x200) bytes
-CMDLINE: root=/dev/mmcblk0p1 rw rootfstype=ext4 data=/dev/mmcblk0p2 consoleblank=0 mtdparts=rk29xxnand:0x00002000@0x00002000(uboot),0x00002000@0x00004000(trust),0x00002000@0x00006000(misc),0x00006000@0x00008000(resource),0x00010000@0x0000e000(kernel),0x00010000@0x0001e000(boot),${ROOTFS_PARTITION_SIZE}@0x00030000(rootfs),-@${USERDATA_PARTITION_ADDR}(userdata)
-
-EOL
-
-    ROOTFS_PARTITION_SIZE=`printf "0x%X" ${IMG_SIZE}`
-    ROOTFS_PARTITION_ADDR=0x6000000
-    USERDATA_PARTITION_ADDR=`printf "0x%X" $((${ROOTFS_PARTITION_ADDR}+${ROOTFS_PARTITION_SIZE}))`
-
-    #########################################
-    ######## partmap.txt for sd-boot ########
-    #########################################
-cat > ${SDFUSE_DIR}/${OS_DIR}/sd-boot/partmap.txt << EOL
-flash=mmc,1:loader:idb:0x8000,0x280000:idbloader.img;
-flash=mmc,1:env:env:0x3F8000,0x8000;
-flash=mmc,1:parm:parm:0x400000,0x0400000:param4sd.txt;
-flash=mmc,1:uboot:raw:0x800000,0x0400000:uboot.img;
-flash=mmc,1:trust:raw:0xC00000,0x0400000:trust.img;
-flash=mmc,1:misc:raw:0x1000000,0x0400000;
-flash=mmc,1:resc:raw:0x1400000,0x0C00000:resource.img;
-flash=mmc,1:kern:raw:0x2000000,0x2000000:kernel.img;
-flash=mmc,1:boot:raw:0x4000000,0x2000000:boot.img;
-flash=mmc,1:rootfs:ext4:0x6000000,${ROOTFS_PARTITION_SIZE}:rootfs.img;
-flash=mmc,1:userdata:ext4:${USERDATA_PARTITION_ADDR},0x0:userdata.img;
-
+TYPE: GPT
+CMDLINE: mtdparts=rk29xxnand:0x00002000@0x00004000(uboot),0x00002000@0x00006000(trust),0x00002000@0x00008000(misc),0x00002000@0x0000a000(dtbo),0x00008000@0x0000c000(resource),0x00014000@0x00014000(kernel),0x00018000@0x00028000(boot),${ROOTFS_PARTITION_SIZE}@0x00040000(rootfs),-@${USERDATA_PARTITION_ADDR}(userdata:grow)
 EOL
 
     # gen empty userdata.img
