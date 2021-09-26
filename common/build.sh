@@ -434,7 +434,7 @@ function prepare_image_for_friendlyelec_eflasher(){
 EOL
 
     #kernel modules
-    KER_MODULES_OUTDIR=/tmp/output_rk3399_kmodules
+    KER_MODULES_OUTDIR="${TOP_DIR}/out/output_rk3399_kmodules"
     mkdir -p $FA_TMP_DIR/rootfs/lib/modules
     if [ -d $KER_MODULES_OUTDIR/lib/modules ]; then
         cp -af $KER_MODULES_OUTDIR/lib/modules/* $FA_TMP_DIR/rootfs/lib/modules/
